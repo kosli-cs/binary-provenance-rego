@@ -40,15 +40,23 @@ jobs:
         with:
           version: "2"
 
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Resolve image and fingerprint
         id: image
         run: |
+          set -o pipefail
           image='${{ inputs.image }}'
           if [ -z "$image" ]; then
             sha='${{ github.event.workflow_run.head_sha }}'
             image="ghcr.io/${{ github.repository }}:${sha:-latest}"
           fi
           digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest)
+          [ -n "$digest" ] && [ "$digest" != null ] || { echo "could not resolve digest of $image" >&2; exit 1; }
           echo "image=$image"   >> "$GITHUB_OUTPUT"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "fingerprint=${digest#sha256:}" >> "$GITHUB_OUTPUT"

@@ -21,7 +21,7 @@ Kosli org: `dangrondahl` · flow: `binary-provenance-rego` · environment: `bina
 | What is checked | "Kosli knows this fingerprint" (built in) | [`policy/binary-provenance.rego`](policy/binary-provenance.rego): fingerprint known, built from a commit in this repo, trail started by this repo's Actions |
 | Who decides | Kosli, implicitly | A Policy Decision Point in the pipeline: `kosli evaluate trail --no-assert` |
 | What is recorded | Nothing | A `decision` attestation against `RCTL-030`, with the Rego and eval report attached |
-| Trail requirement | – | [`kosli/flow-template.yml`](kosli/flow-template.yml): `binary-provenance-decision` of `type: decision` |
+| Trail requirement | – | [`kosli/flow-template.yml`](kosli/flow-template.yml): `binary-provenance-decision` of `type: decision`, under the `hello-world` artifact |
 | Environment requirement | [`kosli/policy-before.yml`](kosli/policy-before.yml) | [`kosli/policy-after.yml`](kosli/policy-after.yml): `for_control: RCTL-030` |
 | Audit view | – | Controls → RCTL-030: **Decisions** (every judgment) and **Coverage** (`binary-provenance-rego-kind` covered) |
 
@@ -67,6 +67,18 @@ trail and decision, and Release deploys the new digest and snapshots it.
 kosli evaluate trail <sha> --flow binary-provenance-rego --org dangrondahl \
   --policy policy/binary-provenance.rego --params @policy/params.json --show-input -o json | jq .input
 ```
+
+## Learning notes
+
+* **Where the decision slot goes.** The first attempt put `binary-provenance-decision` in `trail.attestations`.
+  A decision recorded with `--fingerprint` lands on the *artifact*, though. It showed up there as `unexpected`,
+  the trail-level slot stayed `MISSING` and the trail was `INCOMPLETE`. So the slot is declared under
+  `trail.artifacts[hello-world].attestations`. The fingerprint is what lets `for_control` and `kosli assert` tie the
+  decision to the artifact that is running.
+* **`--no-assert`.** `kosli evaluate` fails the step on a deny by default. The PDP wants the verdict, not a failed
+  step, so a deny is still *recorded* as `--compliant=false`.
+* **Build URL is not in the Rego input.** The "known builder" check uses the trail's `origin_url`, which
+  `kosli begin trail` sets to the Actions run URL.
 
 ## Stretch: SLSA build provenance
 
