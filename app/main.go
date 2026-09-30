@@ -9,7 +9,7 @@ import (
 // version is set at build time: -ldflags "-X main.version=<git sha>".
 var version = "dev"
 
-const greeting = "Hello, world!"
+const greeting = "Hello, Kosli controls!"
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
