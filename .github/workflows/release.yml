@@ -1,0 +1,83 @@
+name: Release
+
+# Runs after every successful Build on main, or by hand for any image.
+# Each run gets a fresh, ephemeral Kind cluster: deploy, snapshot, gone.
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "Image to deploy (default: ghcr.io/<repo>:latest). Try nginx:alpine to see non-compliance."
+        required: false
+        default: ""
+      skip_assert:
+        description: "Skip the PEP (kosli assert) and deploy anyway"
+        type: boolean
+        default: false
+
+concurrency: release
+
+env:
+  KOSLI_ORG: dangrondahl
+  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+  KOSLI_ENV: binary-provenance-rego-kind
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: kosli-dev/setup-cli-action@v5
+        with:
+          version: "2"
+
+      - name: Resolve image and fingerprint
+        id: image
+        run: |
+          image='${{ inputs.image }}'
+          if [ -z "$image" ]; then
+            sha='${{ github.event.workflow_run.head_sha }}'
+            image="ghcr.io/${{ github.repository }}:${sha:-latest}"
+          fi
+          digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "image=$image"   >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "fingerprint=${digest#sha256:}" >> "$GITHUB_OUTPUT"
+          echo "Deploying $image ($digest)"
+
+      - name: "PEP: assert artifact against the environment policy"
+        if: ${{ !inputs.skip_assert }}
+        run: |
+          kosli assert artifact \
+            --fingerprint ${{ steps.image.outputs.fingerprint }} \
+            --environment "$KOSLI_ENV"
+
+      - name: Create ephemeral Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: binary-provenance-rego
+
+      - name: Deploy
+        run: |
+          # Deploy by digest, so what runs is exactly what was asserted.
+          image='${{ steps.image.outputs.image }}'
+          ref="${image%%:*}@${{ steps.image.outputs.digest }}"
+          case "$image" in *@*) ref="$image" ;; esac
+          sed "s|__IMAGE__|$ref|" k8s/deployment.yaml | kubectl apply -f -
+          kubectl -n hello rollout status deploy/hello-world --timeout=180s
+          kubectl -n hello get pods -o wide
+
+      - name: Snapshot environment
+        run: kosli snapshot k8s "$KOSLI_ENV" --namespaces hello
+
+      - name: Show environment compliance
+        run: kosli get snapshot "$KOSLI_ENV"

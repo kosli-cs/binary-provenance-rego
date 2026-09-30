@@ -1,0 +1,18 @@
+{
+  "trail": {
+    "name": "a52eab5b356025646c9387bcde43f4813ec68c98",
+    "origin_url": "https://github.com/kosli-cs/binary-provenance-rego/actions/runs/123456789",
+    "git_commit_info": {
+      "sha1": "a52eab5b356025646c9387bcde43f4813ec68c98",
+      "url": "https://github.com/kosli-cs/binary-provenance-rego/commit/a52eab5b356025646c9387bcde43f4813ec68c98"
+    },
+    "compliance_status": {
+      "artifacts_statuses": {}
+    },
+    "events": [
+      {
+        "type": "trail_reported"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+# AFTER: the same intent expressed as a named control.
+# Anything running in the environment needs a compliant RCTL-030 decision, which is the
+# recorded outcome of policy/binary-provenance.rego, with the policy and report attached.
+# This also makes the environment count as "covered" on RCTL-030's Coverage tab.
+_schema: https://docs.kosli.com/schemas/policy/v1
+artifacts:
+  provenance:
+    required: true   # kept during the transition; can be dropped once RCTL-030 is trusted
+  attestations:
+    - type: decision
+      for_control: RCTL-030

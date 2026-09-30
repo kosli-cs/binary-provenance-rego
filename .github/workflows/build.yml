@@ -1,0 +1,113 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  KOSLI_ORG: dangrondahl
+  KOSLI_FLOW: binary-provenance-rego
+  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+  IMAGE: ghcr.io/${{ github.repository }}
+  # Set the repo variable SLSA_STRETCH=true to also require GitHub's signed build provenance.
+  SLSA_STRETCH: ${{ vars.SLSA_STRETCH == 'true' }}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write      # SLSA stretch: sign the build provenance
+  attestations: write  # SLSA stretch: store it on GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: kosli-dev/setup-cli-action@v5
+        with:
+          version: "2"
+
+      - name: Policy unit tests (offline, fixtures)
+        run: ./scripts/test-policy.sh
+
+      - name: Begin trail
+        run: kosli begin trail ${{ github.sha }} --template-file kosli/flow-template.yml
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          build-args: VERSION=${{ github.sha }}
+          # A single-platform image without buildx attestations keeps the digest pushed here
+          # equal to the digest Kubernetes reports, so the snapshot matches the artifact.
+          provenance: false
+          sbom: false
+
+      - name: Fingerprint
+        id: fp
+        run: |
+          digest='${{ steps.build.outputs.digest }}'
+          echo "fingerprint=${digest#sha256:}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest artifact
+        run: |
+          kosli attest artifact "$IMAGE:${{ github.sha }}" \
+            --name hello-world \
+            --fingerprint ${{ steps.fp.outputs.fingerprint }}
+
+      # ---- Optional SLSA stretch --------------------------------------------------------
+      - name: "SLSA: sign build provenance"
+        if: env.SLSA_STRETCH == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: "SLSA: verify and attest provenance-facts"
+        if: env.SLSA_STRETCH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out
+          gh attestation verify "oci://$IMAGE@${{ steps.build.outputs.digest }}" \
+            --repo "${{ github.repository }}" --format json > out/slsa-verify.json
+          # Distil the signed statement into the few facts the Rego checks.
+          jq '.[0].verificationResult.statement as $s | {
+                subject_digest:    $s.subject[0].digest.sha256,
+                source_git_commit: $s.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit,
+                builder_id:        $s.predicate.runDetails.builder.id
+              }' out/slsa-verify.json > out/provenance-facts.json
+          cat out/provenance-facts.json
+          kosli attest custom \
+            --type provenance-facts --name provenance-facts \
+            --fingerprint ${{ steps.fp.outputs.fingerprint }} \
+            --attestation-data out/provenance-facts.json \
+            --attachments out/slsa-verify.json
+          jq '.require_slsa = true' policy/params.json > out/params.json
+          echo "PARAMS_FILE=out/params.json" >> "$GITHUB_ENV"
+      # -------------------------------------------------------------------------------------
+
+      - name: "PDP: evaluate RCTL-030 and attest decision"
+        run: ./scripts/evaluate-and-decide.sh ${{ github.sha }} ${{ steps.fp.outputs.fingerprint }}
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: decision-evidence
+          path: out/

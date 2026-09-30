@@ -1,0 +1,35 @@
+{
+  "trail": {
+    "name": "a52eab5b356025646c9387bcde43f4813ec68c98",
+    "origin_url": "https://github.com/kosli-cs/binary-provenance-rego/actions/runs/123456789",
+    "git_commit_info": {
+      "sha1": "a52eab5b356025646c9387bcde43f4813ec68c98",
+      "url": "https://github.com/kosli-cs/binary-provenance-rego/commit/a52eab5b356025646c9387bcde43f4813ec68c98"
+    },
+    "compliance_status": {
+      "artifacts_statuses": {
+        "hello-world": {
+          "artifact_fingerprint": "2bcabc23b45489fb0885d69a06ba1d648aeda973fae7bb981bafbb884165e514",
+          "attestations_statuses": {},
+          "is_compliant": true
+        }
+      }
+    },
+    "events": [
+      {
+        "type": "trail_reported"
+      },
+      {
+        "type": "artifact_creation_reported",
+        "template_reference_name": "hello-world",
+        "artifact_fingerprint": "2bcabc23b45489fb0885d69a06ba1d648aeda973fae7bb981bafbb884165e514",
+        "artifact_name": "ghcr.io/kosli-cs/binary-provenance-rego:a52eab5b356025646c9387bcde43f4813ec68c98",
+        "git_commit": "a52eab5b356025646c9387bcde43f4813ec68c98",
+        "git_commit_info": {
+          "sha1": "a52eab5b356025646c9387bcde43f4813ec68c98",
+          "url": "https://github.com/kosli-cs/binary-provenance-rego/commit/a52eab5b356025646c9387bcde43f4813ec68c98"
+        }
+      }
+    ]
+  }
+}

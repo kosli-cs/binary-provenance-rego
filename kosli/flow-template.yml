@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://docs.kosli.com/schemas/flow-template/v1.json
+version: 1
+trail:
+  # The judgment: the recorded outcome of evaluating policy/binary-provenance.rego.
+  # A flow template requires *that a decision was recorded*; tying it to the control
+  # identifier (RCTL-030) is the environment policy's job, via for_control.
+  attestations:
+  - name: binary-provenance-decision
+    type: decision
+  # The evidence: the image built by this trail.
+  artifacts:
+  - name: hello-world

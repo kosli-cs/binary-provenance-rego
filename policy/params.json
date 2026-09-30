@@ -1,0 +1,6 @@
+{
+  "artifact_name": "hello-world",
+  "expected_repo_url": "https://github.com/kosli-cs/binary-provenance-rego/",
+  "expected_origin_prefix": "https://github.com/kosli-cs/binary-provenance-rego/actions/runs/",
+  "require_slsa": false
+}

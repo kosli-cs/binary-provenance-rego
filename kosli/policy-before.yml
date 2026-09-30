@@ -1,0 +1,7 @@
+# BEFORE: the customer's current environment policy (for comparison only; not attached).
+# Provenance is a built-in, implicit check: "Kosli knows this fingerprint".
+# There is no named control, no recorded judgment and no evidence of *why* it passed.
+_schema: https://kosli.com/schemas/policy/environment/v1
+artifacts:
+  provenance:
+    required: true
