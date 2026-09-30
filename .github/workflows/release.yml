@@ -72,6 +72,10 @@ jobs:
           image='${{ steps.image.outputs.image }}'
           ref="${image%%:*}@${{ steps.image.outputs.digest }}"
           case "$image" in *@*) ref="$image" ;; esac
+          # Pull secret, so the GHCR package does not need to be public.
+          kubectl create namespace hello
+          kubectl -n hello create secret docker-registry ghcr --docker-server=ghcr.io \
+            --docker-username='${{ github.actor }}' --docker-password='${{ secrets.GITHUB_TOKEN }}'
           sed "s|__IMAGE__|$ref|" k8s/deployment.yaml | kubectl apply -f -
           kubectl -n hello rollout status deploy/hello-world --timeout=180s
           kubectl -n hello get pods -o wide

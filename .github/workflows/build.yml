@@ -8,6 +8,7 @@ on:
 env:
   KOSLI_ORG: dangrondahl
   KOSLI_FLOW: binary-provenance-rego
+  KOSLI_TRAIL: ${{ github.sha }}
   KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
   IMAGE: ghcr.io/${{ github.repository }}
   # Set the repo variable SLSA_STRETCH=true to also require GitHub's signed build provenance.

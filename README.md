@@ -82,7 +82,7 @@ Set the repo variable `SLSA_STRETCH=true`. Build then:
 ## Setup notes
 
 * Repo secret `KOSLI_API_TOKEN`: a Kosli service-account token for the `dangrondahl` org.
-* The GHCR package must be public, so Kind can pull it without a secret.
+* Kind pulls from GHCR with an `imagePullSecret` made from the workflow's `GITHUB_TOKEN` (`packages: read`), so the package can stay private.
 * Refs: [Working with controls](https://docs.kosli.com/tutorials/working_with_controls) ·
   [evaluate trail](https://docs.kosli.com/client_reference/kosli_evaluate_trail) ·
   [attest decision](https://docs.kosli.com/client_reference/kosli_attest_decision)
